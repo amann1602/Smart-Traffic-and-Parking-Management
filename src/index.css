@@ -1,0 +1,279 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── DARK MODE (default) ─────────────────────────────────────────────────── */
+:root,
+html.dark {
+  --bg-base:        #050d1a;
+  --bg-surface:     #0a1628;
+  --bg-card:        #0f1e35;
+  --bg-card-hover:  #132540;
+  --bg-input:       rgba(5, 13, 26, 0.8);
+  --border:         rgba(30, 58, 95, 0.6);
+  --border-hover:   rgba(29, 110, 245, 0.5);
+  --text-primary:   #f0f6ff;
+  --text-secondary: #94b4d4;
+  --text-muted:     #4a6888;
+  --sidebar-bg:     rgba(5, 13, 26, 0.97);
+  --header-bg:      rgba(5, 13, 26, 0.92);
+  --notif-bg:       rgba(5, 13, 26, 0.98);
+  --city-glow:      #1d6ef5;
+  --city-accent:    #00d4ff;
+  --shadow:         rgba(0, 0, 0, 0.4);
+  --grid-line:      rgba(29, 110, 245, 0.04);
+}
+
+/* ─── LIGHT MODE ──────────────────────────────────────────────────────────── */
+html.light {
+  --bg-base:        #eef2f7;
+  --bg-surface:     #e4eaf3;
+  --bg-card:        #ffffff;
+  --bg-card-hover:  #f3f7fe;
+  --bg-input:       rgba(255, 255, 255, 0.9);
+  --border:         rgba(30, 90, 180, 0.18);
+  --border-hover:   rgba(29, 110, 245, 0.5);
+  --text-primary:   #0d1e35;
+  --text-secondary: #2a4a72;
+  --text-muted:     #7a9abb;
+  --sidebar-bg:     rgba(255, 255, 255, 0.97);
+  --header-bg:      rgba(255, 255, 255, 0.95);
+  --notif-bg:       rgba(255, 255, 255, 0.99);
+  --city-glow:      #1d6ef5;
+  --city-accent:    #0088cc;
+  --shadow:         rgba(10, 40, 100, 0.12);
+  --grid-line:      rgba(29, 110, 245, 0.06);
+}
+
+/* ─── BASE ────────────────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-family: 'Inter', system-ui, sans-serif; scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ─── SCROLLBAR ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--city-glow); }
+
+/* ─── GLASSMORPHISM ───────────────────────────────────────────────────────── */
+.glass {
+  background: var(--bg-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-light {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ─── TEXT COLOURS ────────────────────────────────────────────────────────── */
+.text-city-primary   { color: var(--text-primary); }
+.text-city-secondary { color: var(--text-secondary); }
+.text-city-muted     { color: var(--text-muted); }
+
+/* ─── SIDEBAR ─────────────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.topbar {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  transition: background 0.3s ease;
+}
+
+/* ─── CARDS ───────────────────────────────────────────────────────────────── */
+.city-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.city-card:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--shadow);
+}
+
+/* ─── INPUTS ──────────────────────────────────────────────────────────────── */
+.city-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.city-input:focus {
+  outline: none;
+  border-color: var(--border-hover);
+  box-shadow: 0 0 0 2px rgba(29, 110, 245, 0.2);
+}
+
+.city-input::placeholder { color: var(--text-muted); }
+
+/* ─── GLOW EFFECTS ────────────────────────────────────────────────────────── */
+.glow-blue   { box-shadow: 0 0 20px rgba(29, 110, 245, 0.3), 0 0 40px rgba(29, 110, 245, 0.1); }
+.glow-green  { box-shadow: 0 0 20px rgba(0, 245, 160, 0.3), 0 0 40px rgba(0, 245, 160, 0.1); }
+.glow-red    { box-shadow: 0 0 20px rgba(255, 71, 87, 0.4), 0 0 40px rgba(255, 71, 87, 0.2); }
+.glow-yellow { box-shadow: 0 0 20px rgba(255, 211, 42, 0.3), 0 0 40px rgba(255, 211, 42, 0.1); }
+
+/* ─── GRID BACKGROUND ─────────────────────────────────────────────────────── */
+.city-grid {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* ─── SIGNAL LIGHTS ───────────────────────────────────────────────────────── */
+.signal-red    { background: #ff4757; box-shadow: 0 0 15px #ff4757, 0 0 30px rgba(255,71,87,0.5); }
+.signal-yellow { background: #ffd32a; box-shadow: 0 0 15px #ffd32a, 0 0 30px rgba(255,211,42,0.5); }
+.signal-green  { background: #2ed573; box-shadow: 0 0 15px #2ed573, 0 0 30px rgba(46,213,115,0.5); }
+.signal-off    { background: var(--border); box-shadow: none; }
+
+/* ─── PARKING SLOTS ───────────────────────────────────────────────────────── */
+.slot-available { background: rgba(0, 245, 160, 0.15); border-color: rgba(0, 245, 160, 0.4); }
+.slot-occupied  { background: rgba(255, 71, 87, 0.15);  border-color: rgba(255, 71, 87, 0.4); }
+.slot-reserved  { background: rgba(255, 211, 42, 0.15); border-color: rgba(255, 211, 42, 0.4); }
+
+/* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  0%   { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0);     opacity: 1; }
+}
+@keyframes borderGlow {
+  0%, 100% { border-color: rgba(29, 110, 245, 0.3); }
+  50%       { border-color: rgba(29, 110, 245, 0.8); }
+}
+@keyframes emergencyPulse {
+  0%, 100% { background-color: rgba(255, 71, 87, 0.08); }
+  50%       { background-color: rgba(255, 71, 87, 0.22); }
+}
+@keyframes markerPulse {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes countUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.animate-fade-in  { animation: fadeIn  0.45s ease-out; }
+.animate-slide-in { animation: slideIn 0.3s ease-out; }
+.animated-border  { animation: borderGlow 3s ease-in-out infinite; }
+.emergency-mode   { animation: emergencyPulse 1.5s ease-in-out infinite; }
+.blink            { animation: blink 1.2s ease-in-out infinite; }
+.spinner          { animation: spin 0.85s linear infinite; }
+.count-animate    { animation: countUp 0.55s ease-out; }
+
+/* ─── SIDEBAR ITEM ────────────────────────────────────────────────────────── */
+.sidebar-item {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  color: var(--text-secondary);
+  border-radius: 0.5rem;
+}
+.sidebar-item:hover {
+  background: rgba(29, 110, 245, 0.1);
+  border-left-color: rgba(29, 110, 245, 0.4);
+  color: var(--text-primary);
+}
+.sidebar-item.active {
+  background: rgba(29, 110, 245, 0.15);
+  border-left-color: #1d6ef5;
+  color: var(--text-primary);
+}
+
+/* ─── STAT CARD ───────────────────────────────────────────────────────────── */
+.stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--shadow);
+}
+
+/* ─── GRADIENT TEXT ───────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #60a5fa, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── PROGRESS BAR ────────────────────────────────────────────────────────── */
+.progress-bar {
+  background: linear-gradient(90deg, #1d6ef5, #00d4ff);
+  border-radius: 4px;
+  height: 6px;
+  transition: width 0.5s ease;
+}
+
+/* ─── BADGES ──────────────────────────────────────────────────────────────── */
+.badge-online  { background: rgba(0, 245, 160, 0.15); color: #00c87a; border: 1px solid rgba(0, 245, 160, 0.3); }
+.badge-offline { background: rgba(255, 71, 87, 0.15);  color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3); }
+.badge-warning { background: rgba(255, 211, 42, 0.15); color: #d4a800; border: 1px solid rgba(255, 211, 42, 0.3); }
+
+html.light .badge-warning { color: #b08c00; }
+
+/* ─── NOTIFICATION BADGE ──────────────────────────────────────────────────── */
+.notif-badge { animation: blink 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+/* ─── RECHARTS OVERRIDES ──────────────────────────────────────────────────── */
+.recharts-text,
+.recharts-cartesian-axis-tick-value { fill: var(--text-muted) !important; }
+.recharts-default-tooltip {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+
+/* ─── MAP ─────────────────────────────────────────────────────────────────── */
+.map-container {
+  background: var(--bg-card);
+}
+html.dark  .map-container { background: linear-gradient(135deg, #060e1e 0%, #0a1628 100%); }
+html.light .map-container { background: linear-gradient(135deg, #dde8f5 0%, #eef2f7 100%); }
+
+/* ─── LOGIN PAGE ──────────────────────────────────────────────────────────── */
+html.light .login-bg {
+  background: linear-gradient(135deg, #ddeeff 0%, #c8dff7 50%, #ddeeff 100%) !important;
+}
+html.light .login-bg .city-grid {
+  --grid-line: rgba(29, 110, 245, 0.08);
+}
+
+/* ─── SELECT ──────────────────────────────────────────────────────────────── */
+select { background: var(--bg-input); color: var(--text-primary); }
+select option { background: var(--bg-card); color: var(--text-primary); }
