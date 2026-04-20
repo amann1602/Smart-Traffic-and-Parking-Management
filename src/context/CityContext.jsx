@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { db } from '../firebase';
+import { collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATIONS = [
@@ -119,26 +119,27 @@ export const CityProvider = ({ children }) => {
   const logIdRef = useRef(2);
   const notifIdRef = useRef(2);
 
-  // ─── MySQL Sync ────────────────────────────────────────────────────────────
-  const fetchInitialData = useCallback(async () => {
-    try {
-      const [vRes, lRes] = await Promise.all([
-        fetch(`${API_BASE}/violations`),
-        fetch(`${API_BASE}/logs`)
-      ]);
-      const vData = await vRes.json();
-      const lData = await lRes.json();
-      
-      setViolations(vData.map(v => ({ ...v, time: new Date(v.time) })));
-      setSystemLogs(lData.map(l => ({ ...l, time: new Date(l.time) })));
-    } catch (e) {
-      console.error("Error fetching data from MySQL API:", e);
-    }
-  }, []);
-
+  // ─── Firebase Sync ──────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    // Sync Violations
+    const vQuery = query(collection(db, 'violations'), orderBy('time', 'desc'), limit(50));
+    const unsubscribeV = onSnapshot(vQuery, (snapshot) => {
+      const vData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
+      setViolations(vData);
+    });
+
+    // Sync Logs
+    const lQuery = query(collection(db, 'systemLogs'), orderBy('time', 'desc'), limit(100));
+    const unsubscribeL = onSnapshot(lQuery, (snapshot) => {
+      const lData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
+      setSystemLogs(lData);
+    });
+
+    return () => {
+      unsubscribeV();
+      unsubscribeL();
+    };
+  }, []);
 
   const addNotification = useCallback((type, message) => {
     const id = notifIdRef.current++;
@@ -147,15 +148,14 @@ export const CityProvider = ({ children }) => {
 
   const addLog = useCallback(async (action, module, level = 'info') => {
     try {
-      const res = await fetch(`${API_BASE}/logs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, module, level })
+      await addDoc(collection(db, 'systemLogs'), {
+        action,
+        module,
+        level,
+        time: serverTimestamp(),
       });
-      const newLog = await res.json();
-      setSystemLogs(prev => [{ ...newLog, time: new Date() }, ...prev]);
     } catch (e) {
-      console.error("Error adding log to MySQL:", e);
+      console.error("Error adding log to Firebase:", e);
       const id = logIdRef.current++;
       setSystemLogs(prev => [{ id, action, module, time: new Date(), level }, ...prev].slice(0, 100));
     }
@@ -170,21 +170,16 @@ export const CityProvider = ({ children }) => {
       type,
       location: location?.name || LOCATIONS[getRandom(0, LOCATIONS.length - 1)].name,
       vehicle,
+      time: serverTimestamp(),
       status: 'Active',
       fineAmount: getRandom(500, 2000),
     };
 
     try {
-      const res = await fetch(`${API_BASE}/violations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(violationData)
-      });
-      const savedViolation = await res.json();
-      setViolations(prev => [{ ...savedViolation, time: new Date() }, ...prev]);
+      await addDoc(collection(db, 'violations'), violationData);
       addNotification('warning', `Violation: ${type} detected at ${violationData.location} – ${vehicle}`);
     } catch (e) {
-      console.error("Error saving violation to MySQL:", e);
+      console.error("Error saving violation to Firebase:", e);
       const id = violationIdRef.current++;
       const violation = { ...violationData, id, time: new Date() };
       setViolations(prev => [violation, ...prev].slice(0, 50));

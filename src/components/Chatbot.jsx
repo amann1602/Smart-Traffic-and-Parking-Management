@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Mic, MicOff, Volume2, X, Bot, User, Siren, Info } from 'lucide-react';
 import { useCityData } from '../context/CityContext';
+import { db } from '../firebase';
+import { collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import './Chatbot.css';
-
-const API_BASE = 'http://localhost:5000/api';
 
 const INITIAL_MESSAGES = [
   { id: 1, type: 'bot', text: "Hello! I'm your Pune Smart Traffic Assistant. How can I help you today?", time: new Date() },
@@ -31,22 +31,22 @@ export default function Chatbot() {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Sync with MySQL
-  const fetchMessages = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/messages`);
-      const data = await res.json();
-      if (data.length > 0) {
-        setMessages(data.map(m => ({ ...m, time: new Date(m.time) })));
-      }
-    } catch (e) {
-      console.error("Error fetching messages from MySQL:", e);
-    }
-  }, []);
-
+  // Sync with Firebase
   useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+    const q = query(collection(db, 'chatMessages'), orderBy('time', 'asc'), limit(50));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const dbMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        time: doc.data().time?.toDate() || new Date()
+      }));
+      if (dbMessages.length > 0) {
+        setMessages(dbMessages);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -194,19 +194,17 @@ export default function Chatbot() {
   const handleSendMessage = async (text = inputText) => {
     if (!text.trim()) return;
 
-    // Add user message to MySQL
-    const userMsg = { type: 'user', text };
+    // Add user message to Firebase
+    const userMsg = { 
+      type: 'user', 
+      text, 
+      time: serverTimestamp() 
+    };
     
     try {
-      const res = await fetch(`${API_BASE}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userMsg)
-      });
-      const savedMsg = await res.json();
-      setMessages(prev => [...prev, { ...savedMsg, time: new Date() }]);
+      await addDoc(collection(db, 'chatMessages'), userMsg);
     } catch (e) {
-      console.error("Error saving message connection to MySQL:", e);
+      console.error("Error saving message connection to Firebase:", e);
       setMessages(prev => [...prev, { ...userMsg, id: Date.now(), time: new Date() }]);
     }
     
@@ -216,18 +214,16 @@ export default function Chatbot() {
     setIsTyping(true);
     setTimeout(async () => {
       const aiText = processAIResponse(text);
-      const aiMsg = { type: 'bot', text: aiText };
+      const aiMsg = { 
+        type: 'bot', 
+        text: aiText, 
+        time: serverTimestamp() 
+      };
       
       try {
-        const res = await fetch(`${API_BASE}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(aiMsg)
-        });
-        const savedAiMsg = await res.json();
-        setMessages(prev => [...prev, { ...savedAiMsg, time: new Date() }]);
+        await addDoc(collection(db, 'chatMessages'), aiMsg);
       } catch (e) {
-        console.error("Error saving AI response to MySQL:", e);
+        console.error("Error saving AI response to Firebase:", e);
         setMessages(prev => [...prev, { ...aiMsg, id: Date.now() + 1, time: new Date() }]);
       }
       
