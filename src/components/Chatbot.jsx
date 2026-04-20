@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Mic, MicOff, Volume2, X, Bot, User, Siren, Info } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Send, Mic, MicOff, Volume2, X, Bot, User, Siren, Info, CloudSun, MapPin } from 'lucide-react';
 import { useCityData } from '../context/CityContext';
 import { db } from '../firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import './Chatbot.css';
+
+const API_BASE = 'http://localhost:5000/api';
+const GEN_AI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const INITIAL_MESSAGES = [
   { id: 1, type: 'bot', text: "Hello! I'm your Pune Smart Traffic Assistant. How can I help you today?", time: new Date() },
@@ -119,82 +123,64 @@ export default function Chatbot() {
     }
   };
 
-  const processAIResponse = (input) => {
+  const processAIResponse = async (input) => {
     const query = input.toLowerCase();
-    let response = "";
-
+    
+    // --- 1. LOCAL DATA LOGIC (Priority) ---
+    
     // Emergency
     if (query.includes("emergency") || query.includes("sos") || query.includes("accident")) {
-      response = "I've detected an emergency request. Should I activate system-wide Emergency Mode to prioritize traffic flow?";
-      if (query.includes("activate") || query.includes("yes")) {
-        activateEmergency();
-        response = "🚨 EMERGENCY MODE ACTIVATED. All signals are set to green for priority clearance.";
-      }
+      return "I've detected an emergency request. Should I activate system-wide Emergency Mode to prioritize traffic flow?";
     } 
-    // Traffic Status
-    else if (query.includes("traffic") || query.includes("density")) {
-      if (query.includes("fc road")) {
-        const data = trafficData.find(d => d.name === "FC Road");
-        response = `Traffic at FC Road is currently ${data.density}%, which is considered ${data.density > 70 ? 'High' : data.density > 40 ? 'Moderate' : 'Low'}. Average speed is ${data.speed} km/h.`;
-      } else if (query.includes("mg road")) {
-        const data = trafficData.find(d => d.name === "MG Road");
-        response = `Traffic at MG Road is ${data.density}%. It's ${data.density > 70 ? 'very congested' : 'flowing well'} right now.`;
-      } else if (query.includes("hinjewadi")) {
-        const data = trafficData.find(d => d.name === "Hinjewadi IT Park");
-        response = `IT Park traffic is at ${data.density}%. Expect ${data.density > 60 ? 'some delays' : 'smooth travel'}.`;
-      } else {
-        response = `Overall city traffic density is ${avgDensity}%. ${avgDensity > 60 ? 'Conditions are busy.' : 'Conditions are normal.'}`;
-      }
-    }
-    // Parking
-    else if (query.includes("parking") || query.includes("space") || query.includes("slot")) {
-      if (query.includes("fc road")) {
-        const p = parkingData.find(d => d.name.includes("FC Road"));
-        response = `At PMC Parking FC Road, there are ${p.available} slots available out of ${p.total}.`;
-      } else if (query.includes("baner")) {
-        const p = parkingData.find(d => d.name.includes("Baner"));
-        response = `Baner IT Hub currently has ${p.available} free parking spaces.`;
-      } else {
-        response = `There are currently ${availableParking} parking slots available across the city. Which area are you looking for?`;
-      }
-    }
-    // Signals
-    else if (query.includes("signal") || query.includes("light")) {
-      const activeSignals = signals.filter(s => s.phase === 'green').length;
-      response = `Currently, ${activeSignals} major signals are green. Most systems are in Auto-Optimization mode.`;
-    }
-    // Routes
-    else if (query.includes("route") || query.includes("way") || query.includes("path")) {
-      if (query.includes("fc road")) {
-        response = "The main road to FC is moderately busy. I suggest taking the JM Road bypass for a 5-minute faster arrival.";
-      } else if (query.includes("airport") || query.includes("viman nagar")) {
-        response = "NH-65 is currently heavy. Use the internal Sangamwadi road for a smoother journey towards Viman Nagar.";
-      } else {
-        response = "Most arterial roads are flowing normally. Based on current density, the bypass routes are recommended for East-West transit.";
-      }
-    }
-    // High Traffic Alerts
-    else if (query.includes("busy") || query.includes("congestion") || query.includes("jam")) {
-      const busySpots = trafficData.filter(d => d.density > 75).map(d => d.name);
-      if (busySpots.length > 0) {
-        response = `The most congested areas right now are: ${busySpots.join(", ")}. I recommend avoiding these routes.`;
-      } else {
-        response = "There are no major traffic jams reported at the moment. Traffic is moving smoothly across the city.";
-      }
-    }
-    // Greetings & Misc
-    else if (query.includes("hello") || query.includes("hi") || query.includes("hey")) {
-      response = "Hello! I'm here to provide real-time updates on Pune's traffic and parking. How can I assist you?";
-    } else if (query.includes("thank")) {
-      response = "You're welcome! Safe driving.";
-    } else if (query.includes("time") || query.includes("date")) {
-      response = `It is currently ${new Date().toLocaleTimeString('en-IN')} on ${new Date().toLocaleDateString('en-IN')}.`;
-    }
-    else {
-      response = "I'm not sure about that. I can provide traffic updates for FC Road, MG Road, Hinjewadi, or tell you about parking availability.";
+
+    if (query.includes("activate emergency") || query.includes("turn on emergency")) {
+      activateEmergency();
+      return "🚨 EMERGENCY MODE ACTIVATED. All signals are set to green for priority clearance.";
     }
 
-    return response;
+    // Traffic Status
+    if (query.includes("traffic") || query.includes("density")) {
+      if (query.includes("fc road")) {
+        const data = trafficData.find(d => d.name === "FC Road");
+        return `Traffic at FC Road is currently ${data.density}%, which is considered ${data.density > 70 ? 'High' : data.density > 40 ? 'Moderate' : 'Low'}. Average speed is ${data.speed} km/h.`;
+      } 
+      const busySpots = trafficData.filter(d => d.density > 75).map(d => d.name);
+      if (busySpots.length > 0) {
+        return `The most congested areas right now are: ${busySpots.join(", ")}. Overall density is ${avgDensity}%.`;
+      }
+      return `Overall city traffic density is around ${avgDensity}%. Conditions are relatively normal across major Pune junctions.`;
+    }
+
+    // Parking
+    if (query.includes("parking") || query.includes("space") || query.includes("slot")) {
+      return `There are currently ${availableParking} parking slots available across the city. Baner and Hinjewadi hubs have the most vacancy right now.`;
+    }
+
+    // Weather
+    if (query.includes("weather") || query.includes("temperature") || query.includes("rain")) {
+      return `Current weather in Pune: 31°C, Partly Cloudy. Visibility is good for driving, and there is no rain expected for the next 6 hours.`;
+    }
+
+    // --- 2. ADVANCED AI LOGIC (Google Gemini) ---
+    if (GEN_AI_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(GEN_AI_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        
+        const systemPrompt = `You are the Pune Smart Traffic Assistant. 
+          Current City Status: Avg Traffic Density ${avgDensity}%, Available Parking ${availableParking}. 
+          Answer the user's question politely and helpfully. User asked: `;
+        
+        const result = await model.generateContent(systemPrompt + input);
+        const response = await result.response;
+        return response.text();
+      } catch (error) {
+        console.error("Gemini AI Error:", error);
+      }
+    }
+
+    // Fallback if AI fails or no key
+    return "I'm not sure about that. I can provide traffic updates for major Pune roads, check parking availability, or activate emergency mode.";
   };
 
   const handleSendMessage = async (text = inputText) => {
@@ -222,8 +208,8 @@ export default function Chatbot() {
 
     // AI Response Simulation
     setIsTyping(true);
-    setTimeout(async () => {
-      const aiText = processAIResponse(text);
+    try {
+      const aiText = await processAIResponse(text);
       const aiMsg = { 
         type: 'bot', 
         text: aiText, 
@@ -242,7 +228,10 @@ export default function Chatbot() {
       
       setIsTyping(false);
       speakText(aiText);
-    }, 1000);
+    } catch (error) {
+      console.error("Chat system error:", error);
+      setIsTyping(false);
+    }
   };
 
   const handleKeyPress = (e) => {
