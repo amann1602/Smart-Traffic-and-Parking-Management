@@ -6,19 +6,10 @@ import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard, TrafficCone, ParkingSquare, AlertTriangle, Siren,
   Settings, LogOut, Bell, Menu, X, Sun, Moon, ChevronRight,
-  Activity, Radio, Shield, Map, FileText, Zap
+  Activity, Radio, Shield, Map, FileText, Zap, Car, ShieldAlert, SquareStack, CreditCard, MapPin, MessageSquare
 } from 'lucide-react';
 import Chatbot from './Chatbot';
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard',     icon: LayoutDashboard, roles: ['admin', 'user'] },
-  { path: '/traffic',   label: 'Live Traffic',  icon: TrafficCone,     roles: ['admin', 'user'] },
-  { path: '/signals',   label: 'Signal Control',icon: Radio,           roles: ['admin', 'user'] },
-  { path: '/parking',   label: 'Smart Parking', icon: ParkingSquare,   roles: ['admin', 'user'] },
-  { path: '/violations',label: 'Violations',    icon: AlertTriangle,   roles: ['admin', 'user'] },
-  { path: '/emergency', label: 'Emergency',     icon: Siren,           roles: ['admin', 'user'] },
-  { path: '/map',       label: 'City Map',      icon: Map,             roles: ['admin', 'user'] },
-  { path: '/admin',     label: 'Admin Panel',   icon: Settings,        roles: ['admin'] },
   { path: '/logs',      label: 'System Logs',   icon: FileText,        roles: ['admin'] },
 ];
 

@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCityData } from '../context/CityContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, Cell
 } from 'recharts';
 import {
   Car, ParkingSquare, AlertTriangle, Zap, TrendingUp, TrendingDown, Minus,
-  Activity, Radio, Map, ArrowRight, Siren, CheckCircle2
+  Activity, Radio, Map, ArrowRight, Siren, CheckCircle2, ShieldAlert,
+  CreditCard, MapPin, Sparkles, Clock, Calendar, Bookmark, Info
 } from 'lucide-react';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2 rounded-lg text-xs" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-      <p className="mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+    <div className="glass-effect px-3 py-2 rounded-lg text-xs border border-white/10 shadow-xl">
+      <p className="mb-1 opacity-70">{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }}>{p.name}: <span className="font-bold">{p.value}</span></p>
       ))}
@@ -27,279 +28,310 @@ export default function Dashboard() {
   const {
     avgDensity, totalVehicles, totalParking, availableParking,
     activeViolations, emergencyMode, trendHistory, trafficData, parkingData,
-    signals, getDensityLabel, violations
+    signals, getDensityLabel, violations, toggleEmergencyMode
   } = useCityData();
   const { user, isAdmin } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const densityLabel = getDensityLabel(avgDensity);
-  const densityColor = avgDensity >= 70 ? '#ff4757' : avgDensity >= 35 ? '#e6a800' : '#16a34a';
+  const densityColor = avgDensity >= 70 ? '#ff4757' : avgDensity >= 35 ? '#ffd32a' : '#2ed573';
   const parkingPct = Math.round(((totalParking - availableParking) / totalParking) * 100);
-  const greenSignals = signals.filter(s => s.phase === 'green').length;
-
-  const statCards = [
-    {
-      id: 'card-density',
-      label: 'Avg Traffic Density',
-      value: `${avgDensity}%`,
-      sub: densityLabel,
-      icon: Activity,
-      color: densityColor,
-      trend: avgDensity > 60 ? 'up' : 'down',
-      onClick: () => navigate('/traffic'),
-    },
-    {
-      id: 'card-vehicles',
-      label: 'Active Vehicles',
-      value: totalVehicles.toLocaleString('en-IN'),
-      sub: 'Across all zones',
-      icon: Car,
-      color: '#1d6ef5',
-      trend: 'stable',
-      onClick: () => navigate('/traffic'),
-    },
-    {
-      id: 'card-parking',
-      label: 'Parking Available',
-      value: availableParking,
-      sub: `${parkingPct}% occupied`,
-      icon: ParkingSquare,
-      color: availableParking < 50 ? '#ff4757' : '#16a34a',
-      trend: availableParking > 100 ? 'up' : 'down',
-      onClick: () => navigate('/parking'),
-    },
-    {
-      id: 'card-violations',
-      label: 'Active Violations',
-      value: activeViolations,
-      sub: 'Requires action',
-      icon: AlertTriangle,
-      color: activeViolations > 5 ? '#ff4757' : '#e6a800',
-      trend: activeViolations > 3 ? 'up' : 'stable',
-      onClick: () => navigate('/violations'),
-    },
-  ];
-
-  const TrendIcon = ({ trend }) => {
-    if (trend === 'up')   return <TrendingUp   className="w-3.5 h-3.5 text-red-500" />;
-    if (trend === 'down') return <TrendingDown  className="w-3.5 h-3.5 text-green-500" />;
-    return <Minus className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />;
+  
+  // --- Admin Specific Logic ---
+  const handleManualOverride = (id) => {
+    alert(`Manual override activated for Signal ${id}. Timing adjusted by +15s.`);
   };
 
-  const gridBorder  = isDark ? 'rgba(30,58,95,0.3)' : 'rgba(29,110,245,0.12)';
-  const trackBg     = isDark ? 'rgba(30,58,95,0.5)' : 'rgba(29,110,245,0.1)';
+  // --- User Specific Logic ---
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const handleBookSlot = (slot) => {
+    if (bookedSlots.includes(slot)) {
+      setBookedSlots(prev => prev.filter(s => s !== slot));
+    } else {
+      setBookedSlots(prev => [...prev, slot]);
+      alert(`Slot ${slot} successfully reserved for 2 hours.`);
+    }
+  };
+
+  const statCards = isAdmin ? [
+    { label: 'System Density', value: `${avgDensity}%`, sub: densityLabel, icon: Activity, color: densityColor, trend: 'up' },
+    { label: 'Traffic Load', value: totalVehicles, sub: 'Active vehicles', icon: Car, color: '#1d6ef5', trend: 'stable' },
+    { label: 'Violations', value: activeViolations, sub: 'Requires Review', icon: ShieldAlert, color: '#ff4757', trend: 'up' },
+    { label: 'Emergency Status', value: emergencyMode ? 'ACTIVE' : 'IDLE', sub: 'System Corridor', icon: Siren, color: emergencyMode ? '#ff4757' : '#2ed573', trend: 'stable' },
+  ] : [
+    { label: 'Local Traffic', value: `${avgDensity}%`, sub: 'Relatively Clear', icon: MapPin, color: '#2ed573', trend: 'down' },
+    { label: 'Parking Near Me', value: availableParking, sub: 'Slots available', icon: ParkingSquare, color: '#1d6ef5', trend: 'up' },
+    { label: 'My Unpaid Fines', value: '₹500', sub: 'MH12 AB 1234', icon: CreditCard, color: '#ff4757', trend: 'stable' },
+    { label: 'Safe Routes', value: '4 Active', sub: 'No congestion', icon: TrendingDown, color: '#2ed573', trend: 'down' },
+  ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Welcome */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* 🟢 Header Section */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
-            <span className="gradient-text ml-2">{user?.name?.split(' ')[0]}</span> 👋
+          <div className="flex items-center gap-2 mb-1">
+             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-500 flex items-center gap-1">
+                <div className="w-1 h-1 rounded-full bg-green-500 blink" /> LIVE DATA
+             </span>
+             <span className="text-[10px] opacity-50">Pune Smart City Infrastructure v4.2</span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome, <span className="gradient-text">{user?.name?.split(' ')[0]}</span>
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isAdmin ? 'Full system control active' : 'Pune Smart City – Live Monitoring'} ·
-            <span className="text-blue-500 ml-1">
-              {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </span>
+          <p className="text-sm opacity-60 mt-1">
+            {isAdmin ? '🛡️ Admin: Full system control enabled' : '👥 Citizen: Live traffic monitoring & services'}
           </p>
         </div>
 
-        {emergencyMode && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-red-500 font-bold text-sm border border-red-500/40 emergency-mode">
-            <Siren className="w-4 h-4" />
-            🚨 EMERGENCY CORRIDOR ACTIVE
-          </div>
-        )}
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map(card => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.id}
-              id={card.id}
-              onClick={card.onClick}
-              className="city-card p-5 cursor-pointer group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl" style={{ background: `${card.color}18` }}>
-                  <Icon className="w-5 h-5" style={{ color: card.color }} />
-                </div>
-                <TrendIcon trend={card.trend} />
-              </div>
-              <div className="count-animate">
-                <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{card.label}</p>
-                <p className="text-xs mt-0.5 font-semibold" style={{ color: card.color }}>{card.sub}</p>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-xs transition-colors" style={{ color: 'var(--text-muted)' }}>
-                <span>View details</span>
-                <ArrowRight className="w-3 h-3" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Traffic trend */}
-        <div className="city-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Traffic Density Trend</h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Real-time monitoring</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-green-500">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 blink" />
-              Live
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={trendHistory.slice(-12)}>
-              <defs>
-                <linearGradient id="densGrd" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1d6ef5" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#1d6ef5" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="parkGrd" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#00d4ff" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridBorder} />
-              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval={2} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="density"  name="Density %"  stroke="#1d6ef5" fill="url(#densGrd)" strokeWidth={2} dot={false} />
-              <Area type="monotone" dataKey="parking"  name="Parking %"  stroke="#00d4ff" fill="url(#parkGrd)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Parking usage */}
-        <div className="city-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Parking Occupancy</h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>By location</p>
-            </div>
-            <span className="text-xs px-2 py-1 rounded-full badge-warning">
-              {parkingPct}% Full
-            </span>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={parkingData.map(p => ({
-              name: p.name.split(' ')[0],
-              Available: p.available,
-              Occupied: p.total - p.available,
-            }))}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridBorder} />
-              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="Available" fill="#2ed573" radius={[3,3,0,0]} />
-              <Bar dataKey="Occupied"  fill="#ff4757" radius={[3,3,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="flex items-center gap-3">
+           <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold uppercase tracking-wider opacity-40">System Time</p>
+              <p className="text-lg font-mono font-bold">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+           </div>
+           {isAdmin && (
+             <button 
+                onClick={toggleEmergencyMode}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg ${emergencyMode ? 'bg-red-500 text-white animate-pulse shadow-red-500/20' : 'bg-city-card border border-red-500/30 text-red-500 hover:bg-red-500/10'}`}
+             >
+                <Siren size={20} />
+                {emergencyMode ? 'DEACTIVATE EMERGENCY' : 'EMERGENCY OVERRIDE'}
+             </button>
+           )}
         </div>
       </div>
 
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Traffic by zone */}
-        <div className="city-card p-5">
-          <h3 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-primary)' }}>Traffic by Zone</h3>
-          <div className="space-y-3">
-            {trafficData.slice(0, 6).map((loc, i) => (
-              <div key={loc.id} className="flex items-center gap-3">
-                <span className="text-xs w-4" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{loc.name}</span>
-                    <span className="text-xs font-semibold" style={{
-                      color: loc.density >= 70 ? '#ff4757' : loc.density >= 35 ? '#e6a800' : '#16a34a'
-                    }}>{loc.density}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: trackBg }}>
-                    <div className="h-full rounded-full transition-all duration-1000" style={{
-                      width: `${loc.density}%`,
-                      background: loc.density >= 70 ? 'linear-gradient(90deg,#ff4757,#ff6b35)' : loc.density >= 35 ? 'linear-gradient(90deg,#ffd32a,#ff9f43)' : 'linear-gradient(90deg,#2ed573,#00d4ff)',
-                    }} />
-                  </div>
-                </div>
+      {/* 🟢 Stat Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((card, i) => (
+          <div key={i} className="city-card p-5 group hover:translate-y-[-4px] transition-all">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-3 rounded-2xl" style={{ background: `${card.color}15` }}>
+                <card.icon size={24} style={{ color: card.color }} />
               </div>
-            ))}
+              <div className="flex flex-col items-end">
+                {card.trend === 'up' && <TrendingUp size={16} className="text-red-500" />}
+                {card.trend === 'down' && <TrendingDown size={16} className="text-green-500" />}
+                <span className="text-[10px] font-bold opacity-40 mt-1 uppercase">24H Trend</span>
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold mb-1 tracking-tight">{card.value}</h3>
+            <p className="text-xs opacity-50 font-medium mb-1">{card.label}</p>
+            <p className="text-xs font-bold" style={{ color: card.color }}>{card.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 🟢 Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* LEFT COLUMN (Admin Control / User Booking) */}
+        <div className="lg:col-span-8 space-y-6">
+          
+          {isAdmin ? (
+            /* --- ADMIN: SIGNAL CONTROL --- */
+            <div className="city-card p-6 overflow-hidden">
+               <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                       <Radio size={20} className="text-blue-500" /> Signal Control Center
+                    </h2>
+                    <p className="text-xs opacity-50">Real-time status and manual override</p>
+                  </div>
+                  <button className="text-xs font-bold text-blue-500 hover:underline">Full Traffic Map</button>
+               </div>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {signals.slice(0, 4).map(sig => (
+                    <div key={sig.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="flex flex-col gap-1 items-center p-1.5 bg-black/40 rounded-full border border-white/10">
+                             <div className={`w-3 h-3 rounded-full ${sig.phase === 'red' ? 'bg-red-500 shadow-[0_0_10px_#ff4757]' : 'bg-red-900/50'}`} />
+                             <div className={`w-3 h-3 rounded-full ${sig.phase === 'yellow' ? 'bg-yellow-500 shadow-[0_0_10px_#ffd32a]' : 'bg-yellow-900/50'}`} />
+                             <div className={`w-3 h-3 rounded-full ${sig.phase === 'green' ? 'bg-green-500 shadow-[0_0_10px_#2ed573]' : 'bg-green-900/50'}`} />
+                          </div>
+                          <div>
+                             <p className="font-bold text-sm tracking-tight">{sig.name}</p>
+                             <p className="text-xs opacity-50">Timer: <span className="font-mono text-blue-500 font-bold">{sig.timer}s</span></p>
+                          </div>
+                       </div>
+                       <button 
+                          onClick={() => handleManualOverride(sig.id)}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-blue-500 text-white hover:bg-blue-600 transition-all"
+                       >
+                          MANUAL OVERRIDE
+                       </button>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          ) : (
+            /* --- USER: SMART PARKING --- */
+            <div className="city-card p-6">
+               <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                       <ParkingSquare size={20} className="text-blue-500" /> Reserve Parking Slot 🅿️
+                    </h2>
+                    <p className="text-xs opacity-50">FC Road Multi-level Parking Hub</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-[10px] font-bold">
+                     <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> Available</span>
+                     <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> Booked</span>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
+                  {['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6'].map((slot, i) => {
+                    const isOccupied = i % 5 === 0;
+                    const isMine = bookedSlots.includes(slot);
+                    return (
+                      <button 
+                        key={slot}
+                        disabled={isOccupied && !isMine}
+                        onClick={() => handleBookSlot(slot)}
+                        className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border-2 transition-all ${
+                          isMine ? 'bg-blue-500 border-blue-400 text-white scale-105 shadow-lg shadow-blue-500/20' :
+                          isOccupied ? 'bg-red-500/10 border-red-500/20 text-red-500 opacity-50 cursor-not-allowed' :
+                          'bg-green-500/10 border-green-500/20 text-green-500 hover:border-green-500 hover:bg-green-500/20'
+                        }`}
+                      >
+                         <span className="text-xs font-bold">{slot}</span>
+                         {isMine ? <CheckCircle2 size={12} /> : isOccupied ? <Minus size={12} /> : <Zap size={10} />}
+                      </button>
+                    )
+                  })}
+               </div>
+            </div>
+          )}
+
+          {/* 📊 Traffic Trend Graph (Shared) */}
+          <div className="city-card p-6">
+             <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                     <Activity size={18} className="text-blue-500" /> Density Analytics & Forecast
+                  </h3>
+                </div>
+                <div className="flex gap-2">
+                   <button className="px-2 py-1 rounded bg-blue-500 text-white text-[10px] font-bold">LIVE</button>
+                   <button className="px-2 py-1 rounded bg-white/10 text-white text-[10px] font-bold">24H</button>
+                </div>
+             </div>
+             <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={trendHistory.slice(-15)}>
+                      <defs>
+                        <linearGradient id="areaColor" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#1d6ef5" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#1d6ef5" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="time" hide />
+                      <YAxis hide domain={[0, 100]} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area type="monotone" dataKey="density" stroke="#1d6ef5" fillOpacity={1} fill="url(#areaColor)" strokeWidth={3} />
+                   </AreaChart>
+                </ResponsiveContainer>
+             </div>
           </div>
         </div>
 
-        {/* Signal status */}
-        <div className="city-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Signal Status</h3>
-            <button onClick={() => navigate('/signals')} className="text-blue-500 text-xs hover:underline">View All</button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {signals.slice(0, 6).map(sig => (
-              <div key={sig.id} className="p-2.5 rounded-lg flex items-center gap-2 city-card">
-                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{
-                  background: sig.phase === 'green' ? '#2ed573' : sig.phase === 'yellow' ? '#ffd32a' : '#ff4757',
-                  boxShadow: `0 0 8px ${sig.phase === 'green' ? '#2ed573' : sig.phase === 'yellow' ? '#ffd32a' : '#ff4757'}`,
-                }} />
-                <div className="min-w-0">
-                  <p className="text-xs truncate leading-tight" style={{ color: 'var(--text-secondary)' }}>{sig.name.split(' ')[0]}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sig.timer}s</p>
+        {/* RIGHT COLUMN (AI Insights & Alerts) */}
+        <div className="lg:col-span-4 space-y-6">
+          
+          {/* 🤖 AI INSIGHTS PANEL (Premium Touch) */}
+          <div className="rounded-3xl p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-all">
+                <Sparkles size={120} />
+             </div>
+             <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4 bg-white/10 w-fit px-3 py-1 rounded-full border border-white/20">
+                   <Sparkles size={14} className="text-yellow-300" />
+                   <span className="text-[10px] font-bold uppercase tracking-widest">Gemini Traffic AI</span>
                 </div>
-              </div>
-            ))}
+                <h3 className="text-xl font-bold mb-4 leading-tight">AI Traffic Insights</h3>
+                <div className="space-y-4">
+                   <div className="p-3 bg-white/10 rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                      <p className="text-[10px] opacity-70 font-bold mb-1">PREDICTION</p>
+                      <p className="text-xs font-medium uppercase">Peak traffic expected at **6:15 PM** around Shivaji Nagar.</p>
+                   </div>
+                   <div className="p-3 bg-white/10 rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                      <p className="text-[10px] opacity-70 font-bold mb-1">OPTIMIZATION</p>
+                      <p className="text-xs font-medium uppercase">Redirecting 15% traffic to FC Road bypass to reduce load.</p>
+                   </div>
+                   <div className="p-3 bg-white/10 rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                      <p className="text-[10px] opacity-70 font-bold mb-1">ALERT</p>
+                      <p className="text-xs font-medium uppercase">Air quality improved by 4% due to signal sync optimizations.</p>
+                   </div>
+                </div>
+             </div>
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t text-xs" style={{ borderColor: 'var(--border)' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Green: <span className="text-green-500 font-semibold">{greenSignals}</span></span>
-            <span style={{ color: 'var(--text-muted)' }}>Red: <span className="text-red-500 font-semibold">{signals.filter(s => s.phase === 'red').length}</span></span>
-            <span style={{ color: 'var(--text-muted)' }}>Yellow: <span className="text-yellow-500 font-semibold">{signals.filter(s => s.phase === 'yellow').length}</span></span>
-          </div>
-        </div>
 
-        {/* Recent alerts */}
-        <div className="city-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Recent Alerts</h3>
-            <button onClick={() => navigate('/violations')} className="text-blue-500 text-xs hover:underline">View All</button>
-          </div>
-          <div className="space-y-2.5">
-            {violations.filter(v => v.status === 'Active').slice(0, 4).map(v => (
-              <div key={v.id} className="p-2.5 rounded-lg"
-                style={{ background: 'rgba(255,71,87,0.06)', border: '1px solid rgba(255,71,87,0.2)' }}>
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-red-500">{v.type}</p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{v.location} · {v.vehicle}</p>
+          {/* VIOLATIONS / FINES PANEL */}
+          <div className="city-card p-6">
+             <div className="flex items-center justify-between mb-5">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                   {isAdmin ? <ShieldAlert size={18} className="text-red-500" /> : <CreditCard size={18} className="text-blue-500" />}
+                   {isAdmin ? 'System Violations' : 'My Traffic Fines'}
+                </h3>
+                <span className="text-[10px] font-bold opacity-50 underline">View History</span>
+             </div>
+             
+             <div className="space-y-3">
+                {isAdmin ? (
+                  /* Admin: List of all violations */
+                  violations.slice(0, 3).map(v => (
+                    <div key={v.id} className="p-3 rounded-2xl bg-red-500/5 border border-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-between group">
+                       <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-red-500 uppercase">{v.type}</p>
+                          <p className="text-xs font-bold truncate">{v.vehicle}</p>
+                          <p className="text-[10px] opacity-50 italic">Pune Central · {v.id.toString().slice(-4)}</p>
+                       </div>
+                       <button className="p-2 rounded-xl bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-all"><CheckCircle2 size={14} /></button>
+                    </div>
+                  ))
+                ) : (
+                  /* User: Specific unpaid fine */
+                  <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 space-y-4">
+                     <div className="flex items-center justify-between">
+                        <div>
+                           <p className="text-[10px] font-bold opacity-50 uppercase mb-1">Pending Amount</p>
+                           <p className="text-2xl font-black">₹500.00</p>
+                        </div>
+                        <div className="p-3 rounded-full bg-red-500/20 text-red-500">
+                           <Info size={20} />
+                        </div>
+                     </div>
+                     <div className="text-center p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-[10px] font-bold">MH12 AB 1234 · No Parking Zone</p>
+                        <p className="text-[10px] opacity-50">Captured at Deccan Hub · 11:45 AM</p>
+                     </div>
+                     <button className="w-full py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20">
+                        PAY FINE NOW
+                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
-            {violations.filter(v => v.status === 'Active').length === 0 && (
-              <div className="flex items-center gap-2 text-green-500 text-sm">
-                <CheckCircle2 className="w-4 h-4" />
-                No active violations
-              </div>
-            )}
+                )}
+             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t grid grid-cols-2 gap-2" style={{ borderColor: 'var(--border)' }}>
-            <button onClick={() => navigate('/map')} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-blue-500 hover:bg-blue-500/10 transition-colors">
-              <Map className="w-3 h-3" />City Map
-            </button>
-            <button onClick={() => navigate('/emergency')} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-red-500 hover:bg-red-500/10 transition-colors">
-              <Siren className="w-3 h-3" />Emergency
-            </button>
+          {/* CITY MAP PREVIEW */}
+          <div className="city-card p-4 h-[200px] overflow-hidden relative group cursor-pointer">
+             <div className="absolute inset-0 bg-cover bg-center transition-transform duration-[2s] group-hover:scale-110" 
+                  style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80)' }}>
+             </div>
+             <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+             <div className="absolute bottom-6 left-6 text-white group-hover:translate-x-2 transition-transform">
+                <p className="text-xs font-bold opacity-70">Interactive View</p>
+                <h4 className="text-lg font-black tracking-tight">CITY TRAFFIC MAP</h4>
+                <div className="flex items-center gap-2 mt-2">
+                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 blink" />
+                   <span className="text-[10px] font-bold">Live Tracking Active</span>
+                </div>
+             </div>
           </div>
+
         </div>
       </div>
     </div>
