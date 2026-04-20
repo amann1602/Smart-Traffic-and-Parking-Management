@@ -121,24 +121,30 @@ export const CityProvider = ({ children }) => {
 
   // ─── Firebase Sync ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // Sync Violations
-    const vQuery = query(collection(db, 'violations'), orderBy('time', 'desc'), limit(50));
-    const unsubscribeV = onSnapshot(vQuery, (snapshot) => {
-      const vData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
-      setViolations(vData);
-    });
+    if (!db) return;
 
-    // Sync Logs
-    const lQuery = query(collection(db, 'systemLogs'), orderBy('time', 'desc'), limit(100));
-    const unsubscribeL = onSnapshot(lQuery, (snapshot) => {
-      const lData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
-      setSystemLogs(lData);
-    });
+    try {
+      // Sync Violations
+      const vQuery = query(collection(db, 'violations'), orderBy('time', 'desc'), limit(50));
+      const unsubscribeV = onSnapshot(vQuery, (snapshot) => {
+        const vData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
+        setViolations(vData);
+      });
 
-    return () => {
-      unsubscribeV();
-      unsubscribeL();
-    };
+      // Sync Logs
+      const lQuery = query(collection(db, 'systemLogs'), orderBy('time', 'desc'), limit(100));
+      const unsubscribeL = onSnapshot(lQuery, (snapshot) => {
+        const lData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), time: doc.data().time?.toDate() || new Date() }));
+        setSystemLogs(lData);
+      });
+
+      return () => {
+        unsubscribeV();
+        unsubscribeL();
+      };
+    } catch (e) {
+      console.error("Firestore sync error:", e);
+    }
   }, []);
 
   const addNotification = useCallback((type, message) => {
@@ -147,18 +153,23 @@ export const CityProvider = ({ children }) => {
   }, []);
 
   const addLog = useCallback(async (action, module, level = 'info') => {
-    try {
-      await addDoc(collection(db, 'systemLogs'), {
-        action,
-        module,
-        level,
-        time: serverTimestamp(),
-      });
-    } catch (e) {
-      console.error("Error adding log to Firebase:", e);
-      const id = logIdRef.current++;
-      setSystemLogs(prev => [{ id, action, module, time: new Date(), level }, ...prev].slice(0, 100));
+    if (db) {
+      try {
+        await addDoc(collection(db, 'systemLogs'), {
+          action,
+          module,
+          level,
+          time: serverTimestamp(),
+        });
+        return;
+      } catch (e) {
+        console.error("Error adding log to Firebase:", e);
+      }
     }
+    
+    // Fallback
+    const id = logIdRef.current++;
+    setSystemLogs(prev => [{ id, action, module, time: new Date(), level }, ...prev].slice(0, 100));
   }, []);
 
   const addViolation = useCallback(async (location) => {
@@ -170,22 +181,26 @@ export const CityProvider = ({ children }) => {
       type,
       location: location?.name || LOCATIONS[getRandom(0, LOCATIONS.length - 1)].name,
       vehicle,
-      time: serverTimestamp(),
       status: 'Active',
       fineAmount: getRandom(500, 2000),
     };
 
-    try {
-      await addDoc(collection(db, 'violations'), violationData);
-      addNotification('warning', `Violation: ${type} detected at ${violationData.location} – ${vehicle}`);
-    } catch (e) {
-      console.error("Error saving violation to Firebase:", e);
-      const id = violationIdRef.current++;
-      const violation = { ...violationData, id, time: new Date() };
-      setViolations(prev => [violation, ...prev].slice(0, 50));
-      addNotification('warning', `Violation: ${type} detected at ${violation.location} – ${vehicle}`);
-      addLog(`Violation detected: ${type}`, 'Parking', 'warning');
+    if (db) {
+      try {
+        await addDoc(collection(db, 'violations'), { ...violationData, time: serverTimestamp() });
+        addNotification('warning', `Violation: ${type} detected at ${violationData.location} – ${vehicle}`);
+        return;
+      } catch (e) {
+        console.error("Error saving violation to Firebase:", e);
+      }
     }
+
+    // Fallback
+    const id = violationIdRef.current++;
+    const violation = { ...violationData, id, time: new Date() };
+    setViolations(prev => [violation, ...prev].slice(0, 50));
+    addNotification('warning', `Violation: ${type} detected at ${violation.location} – ${vehicle}`);
+    addLog(`Violation detected: ${type}`, 'Parking', 'warning');
   }, [addNotification, addLog]);
 
   // ─── Emergency Mode ──────────────────────────────────────────────────────────

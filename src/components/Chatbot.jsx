@@ -33,19 +33,25 @@ export default function Chatbot() {
 
   // Sync with Firebase
   useEffect(() => {
-    const q = query(collection(db, 'chatMessages'), orderBy('time', 'asc'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const dbMessages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        time: doc.data().time?.toDate() || new Date()
-      }));
-      if (dbMessages.length > 0) {
-        setMessages(dbMessages);
-      }
-    });
+    if (!db) return;
 
-    return () => unsubscribe();
+    try {
+      const q = query(collection(db, 'chatMessages'), orderBy('time', 'asc'), limit(50));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const dbMessages = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          time: doc.data().time?.toDate() || new Date()
+        }));
+        if (dbMessages.length > 0) {
+          setMessages(dbMessages);
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.error("Chat history sync error:", e);
+    }
   }, []);
 
   // Auto scroll to bottom
@@ -198,13 +204,17 @@ export default function Chatbot() {
     const userMsg = { 
       type: 'user', 
       text, 
-      time: serverTimestamp() 
     };
     
-    try {
-      await addDoc(collection(db, 'chatMessages'), userMsg);
-    } catch (e) {
-      console.error("Error saving message connection to Firebase:", e);
+    if (db) {
+      try {
+        await addDoc(collection(db, 'chatMessages'), { ...userMsg, time: serverTimestamp() });
+      } catch (e) {
+        console.error("Error saving message connection to Firebase:", e);
+        // Local fallback
+        setMessages(prev => [...prev, { ...userMsg, id: Date.now(), time: new Date() }]);
+      }
+    } else {
       setMessages(prev => [...prev, { ...userMsg, id: Date.now(), time: new Date() }]);
     }
     
@@ -217,13 +227,16 @@ export default function Chatbot() {
       const aiMsg = { 
         type: 'bot', 
         text: aiText, 
-        time: serverTimestamp() 
       };
       
-      try {
-        await addDoc(collection(db, 'chatMessages'), aiMsg);
-      } catch (e) {
-        console.error("Error saving AI response to Firebase:", e);
+      if (db) {
+        try {
+          await addDoc(collection(db, 'chatMessages'), { ...aiMsg, time: serverTimestamp() });
+        } catch (e) {
+          console.error("Error saving AI response to Firebase:", e);
+          setMessages(prev => [...prev, { ...aiMsg, id: Date.now() + 1, time: new Date() }]);
+        }
+      } else {
         setMessages(prev => [...prev, { ...aiMsg, id: Date.now() + 1, time: new Date() }]);
       }
       
