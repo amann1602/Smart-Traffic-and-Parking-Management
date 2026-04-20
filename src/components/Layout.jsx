@@ -10,9 +10,6 @@ import {
 } from 'lucide-react';
 import Chatbot from './Chatbot';
 
-  { path: '/logs',      label: 'System Logs',   icon: FileText,        roles: ['admin'] },
-];
-
 // ─── Notification helpers ──────────────────────────────────────────────────
 const NOTIF_COLOR = { danger: 'text-red-400', warning: 'text-yellow-500', info: 'text-blue-400', success: 'text-green-500' };
 const NOTIF_BG    = { danger: 'rgba(255,71,87,0.1)', warning: 'rgba(255,211,42,0.08)', info: 'rgba(29,110,245,0.1)', success: 'rgba(46,213,115,0.08)' };
