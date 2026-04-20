@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
+const API_BASE = 'http://localhost:5000/api';
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LOCATIONS = [
   { id: 'fc-road', name: 'FC Road', area: 'Central Pune', lat: 18.5236, lng: 73.8478 },
@@ -117,35 +119,78 @@ export const CityProvider = ({ children }) => {
   const logIdRef = useRef(2);
   const notifIdRef = useRef(2);
 
+  // ─── MySQL Sync ────────────────────────────────────────────────────────────
+  const fetchInitialData = useCallback(async () => {
+    try {
+      const [vRes, lRes] = await Promise.all([
+        fetch(`${API_BASE}/violations`),
+        fetch(`${API_BASE}/logs`)
+      ]);
+      const vData = await vRes.json();
+      const lData = await lRes.json();
+      
+      setViolations(vData.map(v => ({ ...v, time: new Date(v.time) })));
+      setSystemLogs(lData.map(l => ({ ...l, time: new Date(l.time) })));
+    } catch (e) {
+      console.error("Error fetching data from MySQL API:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
+
   const addNotification = useCallback((type, message) => {
     const id = notifIdRef.current++;
     setNotifications(prev => [{ id, type, message, time: new Date(), read: false }, ...prev].slice(0, 30));
   }, []);
 
-  const addLog = useCallback((action, module, level = 'info') => {
-    const id = logIdRef.current++;
-    setSystemLogs(prev => [{ id, action, module, time: new Date(), level }, ...prev].slice(0, 100));
+  const addLog = useCallback(async (action, module, level = 'info') => {
+    try {
+      const res = await fetch(`${API_BASE}/logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, module, level })
+      });
+      const newLog = await res.json();
+      setSystemLogs(prev => [{ ...newLog, time: new Date() }, ...prev]);
+    } catch (e) {
+      console.error("Error adding log to MySQL:", e);
+      const id = logIdRef.current++;
+      setSystemLogs(prev => [{ id, action, module, time: new Date(), level }, ...prev].slice(0, 100));
+    }
   }, []);
 
-  const addViolation = useCallback((location) => {
-    const id = violationIdRef.current++;
-    violationIdRef.current = id + 1;
+  const addViolation = useCallback(async (location) => {
     const types = ['Illegal Parking', 'Double Parking', 'No Parking Zone', 'Blocking Lane', 'Expired Permit'];
     const type = types[getRandom(0, types.length - 1)];
     const vehicle = `MH-12-${String.fromCharCode(65 + getRandom(0, 25))}${String.fromCharCode(65 + getRandom(0, 25))}-${getRandom(1000, 9999)}`;
-    const violation = {
-      id,
+    
+    const violationData = {
       type,
       location: location?.name || LOCATIONS[getRandom(0, LOCATIONS.length - 1)].name,
       vehicle,
-      time: new Date(),
       status: 'Active',
       fineAmount: getRandom(500, 2000),
     };
-    setViolations(prev => [violation, ...prev].slice(0, 50));
-    addNotification('warning', `Violation: ${type} detected at ${violation.location} – ${vehicle}`);
-    addLog(`Violation detected: ${type}`, 'Parking', 'warning');
-    return violation;
+
+    try {
+      const res = await fetch(`${API_BASE}/violations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(violationData)
+      });
+      const savedViolation = await res.json();
+      setViolations(prev => [{ ...savedViolation, time: new Date() }, ...prev]);
+      addNotification('warning', `Violation: ${type} detected at ${violationData.location} – ${vehicle}`);
+    } catch (e) {
+      console.error("Error saving violation to MySQL:", e);
+      const id = violationIdRef.current++;
+      const violation = { ...violationData, id, time: new Date() };
+      setViolations(prev => [violation, ...prev].slice(0, 50));
+      addNotification('warning', `Violation: ${type} detected at ${violation.location} – ${vehicle}`);
+      addLog(`Violation detected: ${type}`, 'Parking', 'warning');
+    }
   }, [addNotification, addLog]);
 
   // ─── Emergency Mode ──────────────────────────────────────────────────────────

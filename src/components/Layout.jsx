@@ -8,6 +8,7 @@ import {
   Settings, LogOut, Bell, Menu, X, Sun, Moon, ChevronRight,
   Activity, Radio, Shield, Map, FileText, Zap
 } from 'lucide-react';
+import Chatbot from './Chatbot';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard',     icon: LayoutDashboard, roles: ['admin', 'user'] },
@@ -330,6 +331,9 @@ export default function Layout({ children }) {
         <main className="flex-1 overflow-auto city-grid p-4 lg:p-6" style={{ background: 'var(--bg-base)' }}>
           {children}
         </main>
+        
+        {/* Smart Traffic Chatbot */}
+        <Chatbot />
       </div>
     </div>
   );
