@@ -295,3 +295,173 @@ html.light .login-bg .city-grid {
 /* ─── SELECT ──────────────────────────────────────────────────────────────── */
 select { background: var(--bg-input); color: var(--text-primary); }
 select option { background: var(--bg-card); color: var(--text-primary); }
+
+/* ─── STATUS COLORS (Traffic Density) ─────────────────────────────────────── */
+.status-low    { color: #2ed573; background: rgba(46,213,115,0.12); border-color: rgba(46,213,115,0.3); }
+.status-medium { color: #ffd32a; background: rgba(255,211,42,0.12); border-color: rgba(255,211,42,0.3); }
+.status-high   { color: #ff4757; background: rgba(255,71,87,0.12);  border-color: rgba(255,71,87,0.3); }
+
+/* ─── ROLE ACCENTS ─────────────────────────────────────────────────────────── */
+.role-admin { --role-color: #ff4757; --role-bg: rgba(255,71,87,0.1); }
+.role-user  { --role-color: #1d6ef5; --role-bg: rgba(29,110,245,0.1); }
+
+/* ─── ADMIN SIDEBAR ACTIVE ─────────────────────────────────────────────────── */
+.sidebar-item.active-admin {
+  background: rgba(255, 71, 87, 0.12);
+  border-left-color: #ff4757;
+  color: #fff;
+}
+.sidebar-item:hover.admin {
+  background: rgba(255, 71, 87, 0.08);
+  border-left-color: rgba(255, 71, 87, 0.4);
+}
+
+/* ─── PREMIUM CARD VARIANT ─────────────────────────────────────────────────── */
+.premium-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px -8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(16px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.premium-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 24px 48px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  transform: translateY(-6px);
+}
+
+/* ─── PULSE RING ANIMATION ─────────────────────────────────────────────────── */
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  animation: pulseRing 1.5s ease-out infinite;
+}
+
+/* ─── SLIDE UP ANIMATION ───────────────────────────────────────────────────── */
+@keyframes slideUp {
+  0%   { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+.animate-slide-up { animation: slideUp 0.4s ease-out; }
+
+/* ─── GLOW PULSE ───────────────────────────────────────────────────────────── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+  50%       { box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+}
+.glow-pulse { animation: glowPulse 2s ease-in-out infinite; }
+
+/* ─── PARKING SLOT MICRO ANIMATIONS ───────────────────────────────────────── */
+.slot-btn {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.slot-btn:not(:disabled):hover {
+  transform: scale(1.08);
+}
+.slot-btn:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+/* ─── AI GRADIENT SHIMMER ──────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.ai-shimmer {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─── SIDEBAR ROLE GRADIENT ────────────────────────────────────────────────── */
+.sidebar-admin { border-right: 1px solid rgba(255,71,87,0.15) !important; }
+.sidebar-user  { border-right: 1px solid var(--border); }
+
+/* ─── STATUS BADGE ─────────────────────────────────────────────────────────── */
+.badge-live {
+  background: rgba(46,213,115,0.12);
+  border: 1px solid rgba(46,213,115,0.3);
+  color: #2ed573;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+/* ─── ROUTE CARD ───────────────────────────────────────────────────────────── */
+.route-card {
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+}
+.route-card:hover {
+  transform: translateX(4px);
+}
+
+/* ─── TOPBAR ADMIN ACCENT ──────────────────────────────────────────────────── */
+.topbar-admin {
+  background: var(--header-bg) !important;
+  border-bottom: 1px solid rgba(255,71,87,0.12) !important;
+}
+
+/* ─── CITY INPUT ────────────────────────────────────────────────────────────── */
+.city-input {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+.city-input:focus {
+  outline: none;
+  border-color: rgba(29,110,245,0.5);
+  box-shadow: 0 0 0 3px rgba(29,110,245,0.1);
+}
+.city-input::placeholder { color: var(--text-muted); }
+
+/* ─── STAT CARD HOVER ───────────────────────────────────────────────────────── */
+.stat-card {
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px -8px rgba(0,0,0,0.35);
+}
+
+/* ─── BOOKING DRAWER SLIDE-UP ───────────────────────────────────────────────── */
+@keyframes drawerSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-slide-up { animation: drawerSlideUp 0.35s cubic-bezier(0.4,0,0.2,1); }
+
+/* ─── MAP CONTAINER ─────────────────────────────────────────────────────────── */
+.map-container { box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+
+/* ─── SPIN ANIMATION ─────────────────────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spinner { animation: spin 0.8s linear infinite; }
+
+/* ─── LEAFLET OVERRIDES ──────────────────────────────────────────────────────── */
+.leaflet-container { z-index: 0 !important; font-family: 'Inter', sans-serif; }
+.leaflet-pane      { z-index: 1 !important; }
+.leaflet-top,
+.leaflet-bottom    { z-index: 400 !important; }
+.leaflet-control   { z-index: 400 !important; }
+
+
+

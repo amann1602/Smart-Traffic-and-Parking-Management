@@ -5,17 +5,44 @@ import { useCityData } from '../context/CityContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard, TrafficCone, ParkingSquare, AlertTriangle, Siren,
-  Settings, LogOut, Bell, Menu, X, Sun, Moon, ChevronRight,
-  Activity, Radio, Shield, Map, FileText, Zap, Car, ShieldAlert, SquareStack, CreditCard, MapPin, MessageSquare
+  LogOut, Bell, Menu, X, Sun, Moon, ChevronRight,
+  Activity, Radio, Shield, Map, FileText, Zap, Car, ShieldAlert,
+  CreditCard, MapPin, MessageSquare, Sparkles, Route, BarChart3
 } from 'lucide-react';
 import Chatbot from './Chatbot';
+
+// ─── Role-based Navigation ──────────────────────────────────────────────────
+const ADMIN_NAV = [
+  { path: '/dashboard',   label: 'Dashboard',        icon: LayoutDashboard, badge: null },
+  { path: '/traffic',     label: 'Live Traffic',      icon: Activity,        badge: 'LIVE' },
+  { path: '/signals',     label: 'Signal Control',    icon: Radio,           badge: '⚙️' },
+  { path: '/violations',  label: 'Violations',        icon: ShieldAlert,     badge: null },
+  { path: '/emergency',   label: 'Emergency',         icon: Siren,           badge: null },
+  { path: '/logs',        label: 'System Logs',       icon: FileText,        badge: null },
+  { path: '/ai-alerts',   label: 'AI Alerts',         icon: Sparkles,        badge: '🤖' },
+  { path: '/admin',       label: 'Admin Panel',       icon: Shield,          badge: null },
+  { path: '/parking',     label: 'Parking Mgmt',      icon: ParkingSquare,   badge: null },
+];
+
+const USER_NAV = [
+  { path: '/dashboard',   label: 'Dashboard',         icon: LayoutDashboard, badge: null },
+  { path: '/traffic',     label: 'Live Traffic 🚦',   icon: Activity,        badge: 'LIVE' },
+  { path: '/parking',     label: 'Smart Parking 🅿️',  icon: ParkingSquare,   badge: null },
+  { path: '/violations',  label: 'Pay Fine 💰',        icon: CreditCard,      badge: null },
+  { path: '/map',         label: 'City Map 🗺️',       icon: Map,             badge: null },
+  { path: '/routes',      label: 'Route Suggestions', icon: Route,           badge: null },
+  { path: '/emergency',   label: 'Emergency Status',   icon: Siren,           badge: null },
+];
+
+// Combined for breadcrumb label lookup
+const ALL_NAV = [...ADMIN_NAV, ...USER_NAV];
 
 // ─── Notification helpers ──────────────────────────────────────────────────
 const NOTIF_COLOR = { danger: 'text-red-400', warning: 'text-yellow-500', info: 'text-blue-400', success: 'text-green-500' };
 const NOTIF_BG    = { danger: 'rgba(255,71,87,0.1)', warning: 'rgba(255,211,42,0.08)', info: 'rgba(29,110,245,0.1)', success: 'rgba(46,213,115,0.08)' };
 
 export default function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { notifications, unreadNotifications, markAllRead, markNotificationRead, emergencyMode, avgDensity } = useCityData();
   const { isDark, toggle } = useTheme();
   const navigate  = useNavigate();
@@ -25,7 +52,7 @@ export default function Layout({ children }) {
   const [notifOpen,   setNotifOpen]   = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
 
-  const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(user?.role));
+  const visibleNav = isAdmin ? ADMIN_NAV : USER_NAV;
 
   const handleNav = (path) => { navigate(path); setMobileOpen(false); };
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -41,18 +68,29 @@ export default function Layout({ children }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // ─── Admin color scheme ────────────────────────────────────────────────────
+  const adminAccent = '#ff4757';
+  const userAccent  = '#1d6ef5';
+  const accentColor = isAdmin ? adminAccent : userAccent;
+
   // ─── Sidebar component ─────────────────────────────────────────────────────
   const Sidebar = ({ isMobile = false }) => (
-    <aside
-      className={`sidebar flex flex-col h-full transition-all duration-300 ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'}`}
-    >
-      {/* Logo */}
+    <aside className={`sidebar flex flex-col h-full transition-all duration-300 ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'}`}>
+
+      {/* Logo + Role Header */}
       <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div
           className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center relative"
-          style={{ background: 'linear-gradient(135deg, #1d6ef5, #0d4ed8)', boxShadow: '0 0 15px rgba(29,110,245,0.4)' }}
+          style={{
+            background: isAdmin
+              ? 'linear-gradient(135deg, #ff4757, #c0392b)'
+              : 'linear-gradient(135deg, #1d6ef5, #0d4ed8)',
+            boxShadow: isAdmin
+              ? '0 0 15px rgba(255,71,87,0.4)'
+              : '0 0 15px rgba(29,110,245,0.4)',
+          }}
         >
-          <Shield className="w-5 h-5 text-white" />
+          {isAdmin ? <Shield className="w-5 h-5 text-white" /> : <MapPin className="w-5 h-5 text-white" />}
           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 blink"
             style={{ borderColor: 'var(--sidebar-bg)' }} />
         </div>
@@ -62,7 +100,9 @@ export default function Layout({ children }) {
             <div className="font-bold text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
               Pune Smart City
             </div>
-            <div className="text-blue-400 text-xs truncate">Traffic AI System</div>
+            <div className="text-xs truncate font-semibold" style={{ color: accentColor }}>
+              {isAdmin ? '👨‍💼 Admin Control' : '👤 Citizen Portal'}
+            </div>
           </div>
         )}
 
@@ -77,16 +117,39 @@ export default function Layout({ children }) {
         )}
       </div>
 
+      {/* Role Badge Banner */}
+      {(sidebarOpen || isMobile) && (
+        <div
+          className="mx-3 mt-3 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-fade-in"
+          style={{
+            background: isAdmin ? 'rgba(255,71,87,0.08)' : 'rgba(29,110,245,0.08)',
+            border: `1px solid ${isAdmin ? 'rgba(255,71,87,0.25)' : 'rgba(29,110,245,0.25)'}`,
+            color: isAdmin ? '#ff4757' : '#1d6ef5',
+          }}
+        >
+          {isAdmin ? (
+            <><ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" /> Full system control enabled</>
+          ) : (
+            <><Zap className="w-3.5 h-3.5 flex-shrink-0" /> Live traffic monitoring & services</>
+          )}
+        </div>
+      )}
+
       {/* Emergency banner */}
       {emergencyMode && (sidebarOpen || isMobile) && (
-        <div className="mx-3 mt-3 px-3 py-2 rounded-lg text-xs font-bold text-red-400 emergency-mode border border-red-500/30 flex items-center gap-2">
+        <div className="mx-3 mt-2 px-3 py-2 rounded-lg text-xs font-bold text-red-400 emergency-mode border border-red-500/30 flex items-center gap-2">
           <Siren className="w-3.5 h-3.5" />
-          EMERGENCY ACTIVE
+          🚨 EMERGENCY ACTIVE
         </div>
       )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5 mt-3">
+        {(sidebarOpen || isMobile) && (
+          <p className="px-2 mb-2 text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            {isAdmin ? '⚙️ Control Center' : '🌐 My Services'}
+          </p>
+        )}
         {visibleNav.map(item => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -95,13 +158,27 @@ export default function Layout({ children }) {
               key={item.path}
               onClick={() => handleNav(item.path)}
               className={`sidebar-item w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all ${isActive ? 'active' : ''}`}
+              style={{
+                '--sidebar-active-color': accentColor,
+              }}
             >
-              <Icon className={`flex-shrink-0 ${isActive ? 'text-blue-400' : ''}`} style={{ width: 18, height: 18 }} />
+              <Icon
+                className={`flex-shrink-0`}
+                style={{ width: 18, height: 18, color: isActive ? accentColor : undefined }}
+              />
               {(sidebarOpen || isMobile) && (
-                <span className="animate-fade-in font-medium">{item.label}</span>
+                <span className="animate-fade-in font-medium flex-1 text-left">{item.label}</span>
               )}
-              {(sidebarOpen || isMobile) && isActive && (
-                <ChevronRight className="w-3 h-3 ml-auto text-blue-400" />
+              {(sidebarOpen || isMobile) && item.badge && (
+                <span
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${accentColor}20`, color: accentColor, border: `1px solid ${accentColor}40` }}
+                >
+                  {item.badge}
+                </span>
+              )}
+              {(sidebarOpen || isMobile) && isActive && !item.badge && (
+                <ChevronRight className="w-3 h-3 ml-auto" style={{ color: accentColor }} />
               )}
             </button>
           );
@@ -131,6 +208,14 @@ export default function Layout({ children }) {
               <span style={{ color: 'var(--text-secondary)' }}>IoT Nodes</span>
               <span className="text-green-500">10/10</span>
             </div>
+            {isAdmin && (
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: 'var(--text-secondary)' }}>AI Engine</span>
+                <span className="text-purple-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />Active
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -140,7 +225,11 @@ export default function Layout({ children }) {
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, #1d6ef5, #00d4ff)' }}
+            style={{
+              background: isAdmin
+                ? 'linear-gradient(135deg, #ff4757, #c0392b)'
+                : 'linear-gradient(135deg, #1d6ef5, #00d4ff)',
+            }}
           >
             {user?.name?.charAt(0) || 'U'}
           </div>
@@ -148,7 +237,9 @@ export default function Layout({ children }) {
           {(sidebarOpen || isMobile) && (
             <div className="min-w-0 flex-1 animate-fade-in">
               <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
-              <p className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{user?.role}</p>
+              <p className="text-xs capitalize" style={{ color: isAdmin ? '#ff4757' : '#1d6ef5' }}>
+                {isAdmin ? '⚙️ Administrator' : '👤 Citizen'}
+              </p>
             </div>
           )}
 
@@ -188,7 +279,14 @@ export default function Layout({ children }) {
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* ── Topbar ── */}
-        <header className="topbar flex-shrink-0 flex items-center justify-between px-4 lg:px-6 py-3">
+        <header
+          className="topbar flex-shrink-0 flex items-center justify-between px-4 lg:px-6 py-3"
+          style={{
+            borderBottom: isAdmin
+              ? '1px solid rgba(255,71,87,0.15)'
+              : '1px solid var(--border)',
+          }}
+        >
           {/* Left */}
           <div className="flex items-center gap-3">
             <button
@@ -199,8 +297,19 @@ export default function Layout({ children }) {
               <Menu className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                {NAV_ITEMS.find(i => i.path === location.pathname)?.label || 'Dashboard'}
+              <h2 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                {ALL_NAV.find(i => i.path === location.pathname)?.label?.replace(/[🚦🅿️💰🗺️🤖⚙️🚑]/g, '').trim() || 'Dashboard'}
+                {/* Role tag in topbar */}
+                <span
+                  className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                  style={{
+                    background: isAdmin ? 'rgba(255,71,87,0.12)' : 'rgba(29,110,245,0.12)',
+                    color: isAdmin ? '#ff4757' : '#1d6ef5',
+                    border: `1px solid ${isAdmin ? 'rgba(255,71,87,0.3)' : 'rgba(29,110,245,0.3)'}`,
+                  }}
+                >
+                  {isAdmin ? '👨‍💼 ADMIN' : '👤 USER'}
+                </span>
               </h2>
               <p className="text-xs hidden sm:block" style={{ color: 'var(--text-muted)' }}>
                 {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -217,6 +326,13 @@ export default function Layout({ children }) {
                 Emergency Active
               </div>
             )}
+
+            {/* LIVE indicator */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+              style={{ background: 'rgba(46,213,115,0.1)', border: '1px solid rgba(46,213,115,0.25)', color: '#2ed573' }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 blink" />
+              LIVE
+            </div>
 
             {/* ── Dark / Light toggle ── */}
             <button
@@ -298,18 +414,24 @@ export default function Layout({ children }) {
             {/* User avatar chip */}
             <div
               className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer transition-colors"
-              style={{ border: '1px solid var(--border)' }}
+              style={{ border: `1px solid ${isAdmin ? 'rgba(255,71,87,0.2)' : 'var(--border)'}` }}
               onClick={() => navigate('/dashboard')}
             >
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #1d6ef5, #00d4ff)' }}
+                style={{
+                  background: isAdmin
+                    ? 'linear-gradient(135deg, #ff4757, #c0392b)'
+                    : 'linear-gradient(135deg, #1d6ef5, #00d4ff)',
+                }}
               >
                 {user?.name?.charAt(0) || 'U'}
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs font-medium leading-tight" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
-                <p className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{user?.role}</p>
+                <p className="text-xs capitalize" style={{ color: isAdmin ? '#ff4757' : '#1d6ef5' }}>
+                  {isAdmin ? 'Administrator' : 'Citizen'}
+                </p>
               </div>
             </div>
           </div>
@@ -319,7 +441,7 @@ export default function Layout({ children }) {
         <main className="flex-1 overflow-auto city-grid p-4 lg:p-6" style={{ background: 'var(--bg-base)' }}>
           {children}
         </main>
-        
+
         {/* Smart Traffic Chatbot */}
         <Chatbot />
       </div>

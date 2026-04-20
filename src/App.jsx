@@ -14,6 +14,8 @@ import EmergencyPage from './pages/EmergencyPage';
 import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
 import SystemLogs from './pages/SystemLogs';
+import AIAlertsPage from './pages/AIAlertsPage';
+import RouteSuggestionsPage from './pages/RouteSuggestionsPage';
 
 // Loading spinner
 function LoadingScreen() {
@@ -55,6 +57,8 @@ function AuthenticatedApp() {
           <Route path="/map"        element={<MapPage />} />
           <Route path="/admin"      element={<AdminPanel />} />
           <Route path="/logs"       element={<SystemLogs />} />
+          <Route path="/ai-alerts"  element={<AIAlertsPage />} />
+          <Route path="/routes"     element={<RouteSuggestionsPage />} />
           <Route path="*"           element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>
@@ -88,4 +92,3 @@ export default function App() {
     </ThemeProvider>
   );
 }
-
